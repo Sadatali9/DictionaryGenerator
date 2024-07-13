@@ -1,0 +1,377 @@
+#!/usr/bin/bash
+
+# Function to display the banner
+display_banner() {
+    clear
+    check_requirements
+    sleep 2
+    clear
+    echo -e "${RED}██████╗ ██╗      █████╗ ███████╗███████╗${NC}"
+    echo -e "${GREEN}██╔══██╗██║     ██╔══██╗██╔════╝██╔════╝${NC}"
+    echo -e "${YELLOW}██████╔╝██║     ███████║███████╗█████╗  ${NC}"
+    echo -e "${BLUE}██╔══██╗██║     ██╔══██║╚════██║██╔══╝  ${NC}"
+    echo -e "${PURPLE}██║  ██║███████╗██║  ██║███████║███████╗${NC}"
+    echo -e "${CYAN}╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝╚══════╝╚══════╝${NC}"
+    echo ""
+    echo -e "${WHITE}**********************************************************${NC}"
+    echo -e "${WHITE}*${NC}        ${YELLOW}DicGen - Dictionary Generator by Sadat Ali${WHITE}       ${WHITE}*${NC}"
+    echo -e "${WHITE}**********************************************************${NC}"
+    echo ""
+    echo ""
+    
+}
+
+error() {
+    echo "Error: $1"
+    echo "Error: $1"
+    echo "Error: $1"
+    echo "GENERATE AGAIN.."
+    main
+}
+
+parse_options() {
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -b) SIZE="$2"; shift 2 ;;
+            -c) LINES="$2"; shift 2 ;;
+            -d) DUPLICATE="$2"; shift 2 ;;
+            -e) STOP="$2"; shift 2 ;;
+            -f) CHARSET_FILE="$2"; CHARSET_NAME="$3"; shift 3 ;;
+            -i) INVERT=true; shift ;;
+            -l) LITERALS="$2"; shift 2 ;;
+            -m) error "-m option is merged with -p. Please use -p instead."; ;;
+            -o) OUTPUT_FILE="$2"; shift 2 ;;
+            -p) if [[ "$2" =~ ^[0-9]+$ ]]; then PASSWORDS=("$@"); shift $#; else error "Invalid format for -p option."; fi ;;
+            -q) PERMUTE_FILE="$2"; shift 2 ;;
+            -r) RESUME=true; shift ;;
+            -s) START_STRING="$2"; shift 2 ;;
+            -t) PATTERN="$2"; shift 2 ;;
+            -u) DISABLE_PRINT_PERCENTAGE=true; shift ;;
+            -z) COMPRESSION="$2"; shift 2 ;;
+            *) error "Unknown option: $1"; ;;
+        esac
+    done
+}
+display_crunch_guidelines() {
+    clear
+    echo "Crunch Tool Guidelines"
+    echo "======================="
+    echo ""
+    echo "When using the Crunch tool, please follow these guidelines:"
+    echo ""
+    echo "1. **SIZE**: Specify the size of the password."
+    echo "   - Enter a positive integer (e.g., 8)"
+    echo ""
+    echo "2. **LINES**: Specify the number of lines to generate."
+    echo "   - Enter a positive integer (e.g., 1000)"
+    echo ""
+    echo "3. **DUPLICATE**: Specify whether to allow duplicate characters."
+    echo "   - Enter 'yes' or 'no' to enable or disable duplicate characters"
+    echo ""
+    echo "4. **STOP**: Specify the stop point for generating passwords."
+    echo "   - Enter a positive integer (e.g., 10)"
+    echo ""
+    echo "5. **CHARSET_FILE**: Specify the character set file."
+    echo "   - Enter the path to a file containing the character set (e.g., /path/to/charset.txt)"
+    echo ""
+    echo "6. **CHARSET_NAME**: Specify the character set name."
+    echo "   - Enter a string of characters (e.g., 'abcdefghijklmnopqrstuvwxyz')"
+    echo ""
+    echo "7. **INVERT**: Specify whether to invert the character set."
+    echo "   - Enter 'yes' or 'no' to enable or disable invert mode"
+    echo ""
+    echo "8. **LITERALS**: Specify the literals to include in the password."
+    echo "   - Enter a string of literals (e.g., 'abcde')"
+    echo ""
+    echo "9. **OUTPUT_FILE**: Specify the output file for the generated passwords."
+    echo "   - Enter a file name (e.g., 'dictionary.txt')"
+    echo ""
+    echo "10. **PASSWORDS**: Specify the passwords to generate."
+    echo "    - Enter a string of passwords separated by spaces (e.g., 'password1 password2 password3')"
+    echo ""
+    echo "11. **PERMUTE_FILE**: Specify the permute file."
+    echo "    - Enter the path to a file containing the permute data (e.g., /path/to/permute.txt)"
+    echo ""
+    echo "12. **RESUME**: Specify whether to resume generating passwords from a previous session."
+    echo "    - Enter 'yes' or 'no' to enable or disable resume mode"
+    echo ""
+    echo "13. **START_STRING**: Specify the start string for generating passwords."
+    echo "    - Enter a string of characters (e.g., 'abcdefg')"
+    echo ""
+    echo "14. **PATTERN**: Specify the pattern for generating passwords."
+    echo "    - Enter a string of characters (e.g., '?l?l?l?l?l?l')"
+    echo ""
+    echo "15. **DISABLE_PRINT_PERCENTAGE**: Specify whether to disable printing the percentage of completion."
+    echo "    - Enter 'yes' or 'no' to enable or disable disable print percentage mode"
+    echo ""
+    echo "16. **COMPRESSION**: Specify the compression method."
+    echo "    - Enter a string of characters (e.g., 'gzip', 'bzip2', etc.)"
+    echo ""
+    echo "By following these guidelines, you can ensure that your input is logical and syntactically correct."
+    echo ""
+    read -p "Press Enter to continue..."
+}
+# Function to generete dictionary using crunch
+generate_crunch_dict() {
+    echo "Generating dictionary with crunch..."
+    read -p "Wanna read manual(y/n)" ch
+    if [[ $ch == "y" ]]; then
+        display_crunch_guidelines
+    fi
+    read -p "Enter minimum length: " min_length
+    read -p "Enter maximum length: " max_length
+
+    # Allow user to choose charset from file
+    echo "Choose a charset from the following options:"
+    i=1
+    while IFS= read -r line; do
+        echo "$i) $line"
+        ((i++))
+    done < /usr/share/crunch/charset.lst
+    read -p "Enter the number of the desired charset: " charset_num
+    charset=$(sed -n "${charset_num}p" /usr/share/crunch/charset.lst | cut -d' ' -f1)
+
+    read -p "Enter output file (leave blank for default dictionary.txt): " output_file
+    output_file=${output_file:-dictionary.txt}
+
+    echo "Additional options (leave blank if not needed):"
+    read -p "Enter a starting string: " start_string
+    read -p "Enter an ending string: " end_string
+    read -p "Maximum number of duplicate consecutive characters (default is 0): " max_duplicate
+    read -p "Pattern (e.g., @@%@ for letter, letter, number, special character): " pattern
+    read -p "Do you want to invert the charset? (yes/no): " invert_charset
+    if [[ $invert_charset == "yes" ]]; then
+        invert=true
+    fi
+    read -p "Do you want to generate passwords with duplicates? (yes/no): " allow_duplicates
+    if [[ $allow_duplicates == "yes" ]]; then
+        duplicate=true
+    fi
+    read -p "Do you want to compress the output file? (yes/no): " compress_output
+    if [[ $compress_output == "yes" ]]; then
+        read -p "Enter compression type (e.g., gzip, bzip2): " compression
+    fi
+
+    cmd="crunch $min_length $max_length $charset -o $output_file"
+    if [[ -n $start_string ]]; then
+        cmd+=" -s $start_string"
+    fi
+    if [[ -n $end_string ]]; then
+        cmd+=" -e $end_string"
+    fi
+    if [[ -n $max_duplicate ]]; then
+        cmd+=" -d $max_duplicate"
+    fi
+    if [[ -n $pattern ]]; then
+        cmd+=" -t $pattern"
+    fi
+    if [[ $invert == true ]]; then
+        cmd+=" -i"
+    fi
+    if [[ $duplicate == true ]]; then
+        cmd+=" -d"
+    fi
+    if [[ -n $compression ]]; then
+        cmd+=" -z $compression"
+    fi
+
+    echo "Generating dictionary with the following command:"
+    echo "$cmd"
+    eval "$cmd"
+}
+# Function to generate dictionary using cewl
+generate_cewl_dict() {
+    echo "Generating dictionary with cewl..."
+    read -p "Enter URL or File Path: " url_or_file
+    read -p "Enter minimum word length: " min_word_length
+    read -p "Enter maximum word length: " max_word_length
+    read -p "Do you want to ignore words with less than 3 characters? (yes/no): " ignore_short_words
+    if [[ $ignore_short_words == "yes" ]]; then
+        ignore_short=true
+    fi
+    read -p "Do you want to include email addresses? (yes/no): " include_emails
+    if [[ $include_emails == "yes" ]]; then
+        include_email=true
+    fi
+    read -p "Do you want to include phone numbers? (yes/no): " include_phones
+    if [[ $include_phones == "yes" ]]; then
+        include_phone=true
+    fi
+    read -p "Enter output file (leave blank for default dictionary.txt): " output_file
+    output_file=${output_file:-dictionary.txt}
+
+    cmd="cewl $url_or_file -w $output_file"
+    if [[ -n $min_word_length ]]; then
+        cmd+=" -m $min_word_length"
+    fi
+    if [[ -n $max_word_length ]]; then
+        cmd+=" -M $max_word_length"
+    fi
+    if [[ $ignore_short == true ]]; then
+        cmd+=" -i"
+    fi
+    if [[ $include_email == true ]]; then
+        cmd+=" -e"
+    fi
+    if [[ $include_phone == true ]]; then
+        cmd+=" -p"
+    fi
+
+    echo "Generating dictionary with the following command:"
+    echo "$cmd"
+    eval "$cmd"
+}
+
+# Function to generate dictionary using rsmangler
+generate_rsmangler_dict() {
+    echo "Generating dictionary with rsmangler..."
+    read -p "Do you want to enter input strings or provide a file? (strings/file): " input_type
+
+    if [[ $input_type == "strings" ]]; then
+        read -p "Enter input strings (separated by comma): " input_strings
+        input_strings_array=(${input_strings//,/ })
+
+        # Create a temporary file
+        temp_file=$(mktemp)
+
+        # Store the input strings in the temporary file
+        for string in "${input_strings_array[@]}"; do
+            echo "$string" >> "$temp_file"
+        done
+    elif [[ $input_type == "file" ]]; then
+        read -p "Enter input file: " temp_file
+        if [ ! -f "$temp_file" ]; then
+            echo "Error: Input file does not exist."
+            exit 1
+        fi
+    else
+        echo "Error: Invalid input type. Please enter 'strings' or 'file'."
+        exit 1
+    fi
+
+    read -p "Enter output file (leave blank for default dictionary.txt): " output_file
+    output_file=${output_file:-dictionary.txt}
+
+    echo "Additional options (leave blank if not needed):"
+    read -p "Do you want to enable leet mode? (yes/no): " leet_mode
+    if [[ $leet_mode == "yes" ]]; then
+        leet="-l"
+    else
+        leet=""
+    fi
+    read -p "Do you want to enable append/prepend mode? (yes/no): " append_prepend
+    if [[ $append_prepend == "yes" ]]; then
+        append="-a"
+    else
+        append=""
+    fi
+    read -p "Do you want to enable case modification? (yes/no): " case_mod
+    if [[ $case_mod == "yes" ]]; then
+        case_mod="-c"
+    else
+        case_mod=""
+    fi
+
+    # Pass the temporary file to rsmangler using the --file switch
+    cmd="rsmangler --file $temp_file -o $output_file $leet $append $case_mod"
+
+    echo "Generating dictionary with the following command:"
+    echo "$cmd"
+    eval "$cmd"
+
+    # Delete the temporary file if it was created
+    if [[ $input_type == "strings" ]]; then
+        rm "$temp_file"
+    fi
+}
+main() {
+    display_banner
+    echo "Welcome to DicGen - Dictionary Generator"
+    echo "Please select an option:"
+    echo "1. Generate dictionary with crunch"
+    echo "2. Generate dictionary with cewl"
+    echo "3. Generate dictionary with rsmangler"
+    echo "4. Quit"
+    read -p "Enter your choice: " CHOICE
+    case $CHOICE in
+        1) generate_crunch_dict ;;
+        2) generate_cewl_dict ;;
+        3) generate_rsmangler_dict ;;
+        4) exit ;;
+        *) error "Invalid choice"; ;;
+    esac
+}
+check_requirements() {
+    read -p "Do you want to check if requirements are filled? (y/n): " response
+    if [[ $response == "y" ]]; then
+        echo "Checking requirements..."
+        required_tools=(crunch rsmangler cewl)
+        missing_tools=()
+
+        for tool in "${required_tools[@]}"; do
+            if ! command -v "$tool" &> /dev/null; then
+                missing_tools+=("$tool")
+            fi
+        done
+
+        if [[ ${#missing_tools[@]} -gt 0 ]]; then
+            echo "The following tools are missing:"
+            for tool in "${missing_tools[@]}"; do
+                echo "  * $tool"
+            done
+            read -p "Do you want to install the missing tools? (y/n): " install_response
+            if [[ $install_response == "y" ]]; then
+                echo "Installing missing tools..."
+                for tool in "${missing_tools[@]}"; do
+                    case $tool in
+                        crunch) sudo apt-get install crunch -y ;;
+                        rsmangler) sudo apt-get install rsmangler -y ;;
+                        cewl) sudo apt-get install cewl -y ;;
+                        *) echo "Error: Unknown tool $tool" ;;
+                    esac
+                done
+                echo "Installation complete."
+            else
+                echo "Please install the missing tools manually."
+            fi
+        else
+            echo "All requirements are met."
+        fi
+    else
+        echo "Skipping requirement check."
+    fi
+}
+
+# Initialize colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+PURPLE='\033[0;35m'
+CYAN='\033[0;36m'
+WHITE='\033[0;37m'
+NC='\033[0m'
+
+# Initialize variables
+SIZE=""
+LINES=""
+DUPLICATE=""
+STOP=""
+CHARSET_FILE=""
+CHARSET_NAME=""
+INVERT=""
+LITERALS=""
+OUTPUT_FILE=""
+PASSWORDS=()
+PERMUTE_FILE=""
+RESUME=""
+START_STRING=""
+PATTERN=""
+DISABLE_PRINT_PERCENTAGE=""
+COMPRESSION=""
+
+# Parse command-line options
+parse_options $@
+
+# Start the main function
+main
