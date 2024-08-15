@@ -18,6 +18,9 @@ Before running DicGen, ensure you have the following tools installed:
 - `rsmangler`
 - `cewl`
 
-You can install them using:
+You can install them on linux using:
 ```bash
-sudo apt-get install crunch rsmangler cewl
+sudo git clone https://github.com/Sadatali9/DictionaryGenerator.git
+cd DictionaryGenerator
+sudo chmod +x dicGen
+sudo ./dicGen
