@@ -185,7 +185,7 @@ generate_cewl_dict() {
     read -p "Enter URL or File Path: " url_or_file
     read -p "Enter minimum word length: " min_word_length
     read -p "Enter maximum word length: " max_word_length
-    read -p "Do you want to ignore words with less than 3 characters? (yes/no): " ignore_short_words
+   # read -p "Do you want to ignore words with less than 3 characters? (yes/no): " ignore_short_words
     if [[ $ignore_short_words == "yes" ]]; then
         ignore_short=true
     fi
@@ -205,7 +205,7 @@ generate_cewl_dict() {
         cmd+=" -m $min_word_length"
     fi
     if [[ -n $max_word_length ]]; then
-        cmd+=" -M $max_word_length"
+        cmd+=" -x $max_word_length"
     fi
     if [[ $ignore_short == true ]]; then
         cmd+=" -i"
